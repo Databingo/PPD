@@ -1,0 +1,88 @@
+package main
+
+import (
+	"fmt"
+	"github.com/grokify/html-strip-tags-go"
+	"github.com/siongui/gojianfan"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+)
+
+var dir = "/"
+var public_ctn = make(chan string)
+var wg sync.WaitGroup
+
+func searcher(private_ctn chan string, dir string, word string) {
+	for path, content_str := range page_m {
+	        wg.Add(1)
+		go parse_zcj(private_ctn, path, content_str, word)
+	}
+	wg.Wait()
+}
+
+func parse_zcj(private_ctn chan string, path string, content_str string, word string) {
+	defer wg.Done()
+	sen_list := strings.Split(content_str, "<br>")
+	for _, n := range sen_list {
+		// get raw number extracted from pali lines
+		word_list := strings.Split(n, ".")
+		no := strings.Join(strings.Fields(word_list[0]), "") // remove space
+		if _, err := strconv.Atoi(no); err == nil {          // check if number
+			no_pl := " " + no + "."
+			no_cn := "<!" + no + ">"
+			content_str = strings.Replace(content_str, no_pl, "^-^"+no+".pl.", -1)
+			content_str = strings.Replace(content_str, no_cn, "^-^"+no+".cn.", -1)
+		}
+	}
+
+	no := ""
+	nu_para_list := strings.Split(content_str, "^-^")
+	// 454.cn ...
+	for _, p := range nu_para_list {
+		// find hit
+		if strings.Contains(strip.StripTags(p), word) {
+			word_list := strings.Split(p, ".")
+			// find num
+			no = strings.Join(strings.Fields(word_list[0]), "") // remove space
+			//check if number
+			if _, err := strconv.Atoi(no); err != nil {
+				println("sentence prefix is not number, continue \n")
+				continue
+			}
+			// find sutta
+			sutta_no := strings.Split(filepath.Base(path), ".")[0] + "."
+
+			// find para
+			for _, n := range nu_para_list {
+
+				select {
+				case <-private_ctn:
+					return
+				default:
+					word_list_n := strings.Split(n, ".")
+					// find num
+					no_n := strings.Join(strings.Fields(word_list_n[0]), "") // remove space
+					if no_n == no && n != p {
+						//println(no_n, word)
+						hit_lg := word_list[1]
+						hit_para := sutta_no + strings.Join(strings.Fields(strip.StripTags(p)), " ") //remove duplicate space
+						//println(hit_para)
+						hit_para = strings.Replace(hit_para, word, "<item class='word'>"+word+"</item>", -1)
+						hit_para = strings.Replace(hit_para, `"`, `'`, -1)
+						parallel_lg := word_list_n[1]
+						parallel_para := sutta_no + strings.Join(strings.Fields(strip.StripTags(n)), " ") //remove duplicate space
+						parallel_para = strings.Replace(parallel_para, `"`, `'`, -1)
+						json := fmt.Sprintf(`{"type":0, "word":"%s", "lg":"%s", "%s":"%s", "%s":"%s"}`,
+							gojianfan.T2S(word), hit_lg, hit_lg, hit_para, parallel_lg, parallel_para)
+						public_ctn <- json
+						//private_ctn <- json
+						println("put2ch --" + json[:100])
+						break //now just for two kind language ok
+					}
+				}
+			}
+		}
+	}
+}

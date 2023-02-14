@@ -1,0 +1,13 @@
+bash ./mk_data.sh &&\
+CGO_ENABLED=1 go build -ldflags="-w" -a -o ./ppd.app/Contents/MacOS/ppd *.go && \
+(umount /Volumes/ppd ||\
+hdiutil attach ppd.dmg) &&\
+rm -rf /Volumes/ppd/ppd &&\
+cp -R ppd.app /Volumes/ppd &&\
+cp ~/Desktop/Applications /Volumes/ppd &&\
+hdiutil detach /Volumes/ppd &&\
+rm -rf ./ppd_distrbute.dmg &&\
+hdiutil convert ./ppd.dmg -format UDCO -o ./ppd_distrbute.dmg &&\
+pkill -f ppd.app
+./ppd.app/Contents/MacOS/ppd 
+#open ./ppd.app

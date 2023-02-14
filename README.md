@@ -20,6 +20,7 @@ Double click to install & typing words in search bar.
 - 1.Currently only support Dīghanikāya and its Chinese version, may be more documents could to be imported.
 - 2.Currently only support Chinese language, may be more languages could to be imported, such as Thai, Deutsch, etc.
 - 3.Maybe could deploy a gramma parser that analyzing Pāli&Sanskrit sentence into different tense/declension case parts according to the Pāṇini grammar rules.
+- 4.Welcome comments & suggestions for futuer developing.
 
 
 ## Acknowledgements

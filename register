@@ -1,0 +1,252 @@
+package main
+
+import (
+	"bytes"
+	"encoding/binary"
+	"fmt"
+	"github.com/databingo/webview"
+	"github.com/gorilla/websocket"
+	"github.com/siongui/gojianfan"
+	"github.com/tidwall/gjson"
+	"github.com/tidwall/sjson"
+	"gopkg.in/igm/sockjs-go.v2/sockjs"
+	"io/ioutil"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"runtime"
+	"strings"
+	"sync"
+)
+
+const RECORD_LEN = 10000 // binary record length 10000 characters*
+const RECORD_POSITION_IDENTIFIER = "hôdlhôdl"
+const RECORD_INIT = `{"record":{"registered":0,"mac":"","users":[],"users_limit":10}}`
+
+var UserRights int
+var w webview.WebView
+
+func pwd() (dir string) {
+	dir, err := os.Getwd()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return dir
+}
+
+func binary_abp() (abp string) {
+	abp, err := os.Executable()
+	if err != nil {
+		log.Fatal(err)
+	}
+	return abp
+}
+
+func read_file(add string) (ctx string) {
+	b, err := ioutil.ReadFile(add)
+	if err != nil {
+		log.Fatal(err)
+	}
+	str := string(b)
+	return str
+}
+
+func binary_name() (name string) {
+	if runtime.GOOS == "windows" {
+		return "webwechat_names.exe"
+	} else {
+		return "webwechat_names"
+	}
+}
+
+func main() {
+	mux := http.NewServeMux()
+	mux.Handle("/", http.FileServer(AssetFile()))
+	go http.ListenAndServe(":9999", mux)
+	go websocket_center()
+
+	http.HandleFunc("/search", search_Handler)
+	handler := sockjs.NewHandler("/search", sockjs.DefaultOptions, SearchHandler)
+	go http.ListenAndServe(":9998", handler)
+
+	w = webview.New(webview.Settings{
+		Title:  `Pali Parallel Dictionary`,
+		Width:  1000,
+		Height: 600,
+		URL:    `http://localhost:9999/myapp/index.html`,
+		Debug:  true,
+		//Resizable: true,
+		Resizable:              false,
+		ExternalInvokeCallback: callback,
+	})
+	w.Run()
+
+}
+
+func callback(w webview.WebView, data string) {
+	switch {
+	case strings.HasPrefix(data, "inner_data:"):
+	case (data == "register"):
+	}
+}
+
+func read_binary() (bin []byte) {
+	f, err := os.Open(binary_abp())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer f.Close()
+	bin, err = ioutil.ReadAll(f)
+	if err != nil {
+		log.Fatal(err)
+	}
+	return bin
+}
+
+func get_position_0() (position_0 int) {
+	bin := read_binary()
+	s := bytes.Split(bin, []byte(RECORD_POSITION_IDENTIFIER))
+	for _, e := range s {
+		if len(e) == RECORD_LEN {
+			position_0 = bytes.Index(bin, e)
+		}
+	}
+	return position_0
+}
+
+func get_record_0() (record_0 string) {
+	bin := read_binary()
+	position_0 := get_position_0()
+	record_0 = string(bin[position_0 : position_0+RECORD_LEN])
+	fmt.Printf("data_byte_space: %d \n", len(record_0))
+	record_0 = strings.Replace(record_0, "*", "", -1)
+	fmt.Printf("record_record: %s \n", record_0)
+	return record_0
+}
+
+func write_record_0(record string) (y_n int) {
+	if len(record) > RECORD_LEN {
+		log.Fatal(fmt.Sprint("cannot write more than %s bytes data", RECORD_LEN))
+	}
+	bin := read_binary()
+	position_0 := get_position_0()
+	copy([]byte(data_byte_space[0:]), record) // for short record to cover prerecord
+	copy(bin[position_0:], record)
+	fmt.Printf("to record: %s \n", strings.Replace(string(bin[position_0:position_0+RECORD_LEN]), "*", "", -1))
+	if runtime.GOOS == "linux" {
+		os.Remove(binary_abp())
+	}
+	ff, err := os.Create(binary_abp())
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer ff.Close()
+	err = binary.Write(ff, binary.LittleEndian, bin)
+	if err != nil {
+		log.Fatal(err)
+	}
+	switch runtime.GOOS {
+	case "windows":
+		os.Chmod(binary_abp(), 0200)
+	case "linux":
+		os.Chmod(binary_abp(), 0777)
+	}
+	confirm_record := get_record_0()
+	if confirm_record == record {
+		println("---comfirmed new record---")
+		return 1
+	}
+	return 0
+}
+
+func get_original_mac_addrs() ([]string, error) {
+	ifas, err := net.Interfaces()
+	if err != nil {
+		return nil, err
+	}
+	var as []string
+	for _, ifa := range ifas {
+		a := ifa.HardwareAddr.String()
+		if a != "" {
+			as = append(as, a)
+		}
+	}
+	return as, nil
+}
+
+func get_mac_record() (mac string) {
+	record := get_record_0()
+	mac = gjson.Get(record, "record.mac").String()
+	return mac
+}
+
+func check_registered() (y_n int) {
+	record := get_record_0()
+	registered := int(gjson.Get(record, "record.registered").Int())
+	return registered
+}
+
+func get_users_record() (users []gjson.Result) {
+	record := get_record_0()
+	users = gjson.Get(record, "record.users").Array()
+	return users
+}
+
+func check_limited() (y_n int) {
+	record := get_record_0()
+	limit := gjson.Get(record, "record.users_limit").Int()
+	users_number := int64(len(get_users_record()))
+	if users_number < limit {
+		return 1
+	}
+	return 0
+}
+
+func register() {
+	record := get_record_0()
+	new_record, _ := sjson.Set(record, "record.registered", 1)
+	write_record_0(new_record)
+}
+
+func check_mac_matched() (y_n int) {
+	mac_record := get_mac_record()
+	macs, err := get_original_mac_addrs()
+	if err != nil {
+		log.Fatal(err)
+	}
+	for _, mac := range macs {
+		if mac == mac_record {
+			return 1
+		}
+	}
+	return 0
+}
+
+func init_bind_mac() {
+	record := get_record_0()
+	if record == "" {
+		fmt.Printf("init_bind_mac \n")
+		macs, err := get_original_mac_addrs()
+		if err != nil {
+			log.Fatal(err)
+		}
+		mac_to_bind := macs[0]
+		new_record, _ := sjson.Set(RECORD_INIT, "record.mac", mac_to_bind)
+		write_record_0(new_record)
+	}
+}
+
+func look_user_rights() int {
+	m := check_mac_matched()
+	r := check_registered()
+	l := check_limited()
+	switch m & r & l {
+	case 1:
+		println("UserRights: 1 registered")
+		UserRights = 1
+	case 0:
+		UserRights = 0
+	}
+	return UserRights
+}
