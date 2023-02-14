@@ -1,6 +1,6 @@
 # PPD: A Pāli Parallel Dictionary
-This software could provide the most used case of a Pāli word in the whole Dīghanikāya scripts with its context both in Pāli and Chinese parallelly.
 ![introduction](ppd_intro.png)
+## Screenshot
 ![screenshot](ppd.gif)
 
 ## Support OS
