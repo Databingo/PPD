@@ -16,11 +16,11 @@ This software could provide the most used case of a Pāli word in the whole Dīg
 Double click to install & typing words in search bar.
 
 ## About development:
-- 1.Currently only support Dīghanikāya and lts Chinese version, may be more documents to be imported.
+- 1.Currently only support Dīghanikāya and its Chinese version, may be more documents could to be imported.
 - 2.Currently only support Chinese language, may be more languages could to be imported, such as Thai, Deutsch, etc.
-- 3.Maybe could deploy a gramma parser that analyzing Pāli&Sanskrit sentence into different tense/declensions case parts according to Pāṇini grammar rules.
+- 3.Maybe could deploy a gramma parser that analyzing Pāli&Sanskrit sentence into different tense/declension case parts according to the Pāṇini grammar rules.
 
 
-## Thanks
+## Acknowledgements
 The Chinese translation comes from https://agama.buddhason.org/index.htm
 
