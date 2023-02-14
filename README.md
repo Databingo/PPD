@@ -1,6 +1,7 @@
 # PPD: A Pāli Parallel Dictionary
 ![introduction](ppd_intro.png)
-## Screenshot
+
+## Screen Record
 ![screenshot](ppd.gif)
 
 ## Support OS
