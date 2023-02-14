@@ -1,4 +1,4 @@
-# PPD
+# PPD program
 A Pāli Parallel Dictionary 
 This software could provide the most used case of a Pāli word in the whole Dīghanikāya scripts with its context both in Pāli and Chinese parallelly.
 ![introduction](ppd_intro.gif)
@@ -24,5 +24,4 @@ Double click to install & typing words in search bar.
 
 ## Thanks
 The Chinese translation come from https://agama.buddhason.org/index.htm
-
 
